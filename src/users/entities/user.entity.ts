@@ -1,14 +1,13 @@
-import {
-  ObjectType,
-  Field,
-  InputType,
-  registerEnumType,
-} from '@nestjs/graphql';
-import { IsString, IsEmail } from 'class-validator';
-import { Column, Entity, BeforeInsert, BeforeUpdate } from 'typeorm';
-import { CoreEntity } from './core.entity';
-import * as bcrypt from 'bcrypt';
-import { InternalServerErrorException } from '@nestjs/common';
+import { Field, InputType, ObjectType, registerEnumType } from "@nestjs/graphql";
+import { IsEmail, IsString } from "class-validator";
+import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany } from "typeorm";
+
+import * as bcrypt from "bcrypt";
+import { InternalServerErrorException } from "@nestjs/common";
+import { CoreEntity } from "../../common/entities/core.entity";
+import { Review } from "../../review/entities/review.entity";
+import { Subscription } from "../../podcast/entities/subscription.entity";
+import { Played } from "../../podcast/entities/played.entity";
 
 export enum UserRole {
   Host = 'Host',
@@ -22,18 +21,31 @@ registerEnumType(UserRole, { name: 'UserRole' });
 @Entity()
 export class User extends CoreEntity {
   @Column()
-  @Field(type => String)
+  @Field(() => String)
   @IsEmail()
   email: string;
 
   @Column()
-  @Field(type => String)
+  @Field(() => String)
   @IsString()
   password: string;
 
   @Column({ type: 'simple-enum', enum: UserRole })
-  @Field(type => UserRole)
+  @Field(() => UserRole)
   role: UserRole;
+  
+  @Field(() => [Review])
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[]
+  
+  @Field(() => [Subscription])
+  @OneToMany(() => Subscription, (subscription) => subscription.user)
+  subscriptions: Subscription[]
+  
+  @Field(() => [Played])
+  @OneToMany(() => Played, (played) => played.user)
+  playedEpisodes: Played[]
+  
 
   @BeforeInsert()
   @BeforeUpdate()

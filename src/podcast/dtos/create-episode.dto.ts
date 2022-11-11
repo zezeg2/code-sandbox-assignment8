@@ -1,7 +1,7 @@
-import { Field, InputType, Int, ObjectType, PickType } from '@nestjs/graphql';
-import { IsInt } from 'class-validator';
-import { Episode } from '../entities/episode.entity';
-import { CoreOutput } from './output.dto';
+import { Field, InputType, Int, ObjectType, PickType } from "@nestjs/graphql";
+import { IsInt } from "class-validator";
+import { Episode } from "../entities/episode.entity";
+import { CoreOutput } from "../../common/dtos/output.dto";
 
 @InputType()
 export class CreateEpisodeInput extends PickType(
@@ -9,13 +9,13 @@ export class CreateEpisodeInput extends PickType(
   ['title', 'category'],
   InputType,
 ) {
-  @Field(type => Int)
+  @Field(() => Int)
   @IsInt()
   podcastId: number;
 }
 
 @ObjectType()
 export class CreateEpisodeOutput extends CoreOutput {
-  @Field(type => Int, { nullable: true })
+  @Field(() => Int, { nullable: true })
   id?: number;
 }

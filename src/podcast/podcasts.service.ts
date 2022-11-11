@@ -1,26 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
+import { CreateEpisodeInput, CreateEpisodeOutput } from "./dtos/create-episode.dto";
+import { CreatePodcastInput, CreatePodcastOutput } from "./dtos/create-podcast.dto";
+import { UpdateEpisodeInput } from "./dtos/update-episode.dto";
+import { UpdatePodcastInput } from "./dtos/update-podcast.dto";
+import { Episode } from "./entities/episode.entity";
+import { Podcast } from "./entities/podcast.entity";
+import { CoreOutput } from "../common/dtos/output.dto";
 import {
-  CreateEpisodeInput,
-  CreateEpisodeOutput,
-} from './dtos/create-episode.dto';
-import {
-  CreatePodcastInput,
-  CreatePodcastOutput,
-} from './dtos/create-podcast.dto';
-import { UpdateEpisodeInput } from './dtos/update-episode.dto';
-import { UpdatePodcastInput } from './dtos/update-podcast.dto';
-import { Episode } from './entities/episode.entity';
-import { Podcast } from './entities/podcast.entity';
-import { CoreOutput } from './dtos/output.dto';
-import {
-  PodcastOutput,
   EpisodesOutput,
   EpisodesSearchInput,
   GetAllPodcastsOutput,
   GetEpisodeOutput,
-} from './dtos/podcast.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+  PodcastOutput
+} from "./dtos/podcast.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { ILike, Repository } from "typeorm";
+import { SearchPodcastInput, SearchPodcastOutput } from "./dtos/search-podcast.dto";
+import { Subscription } from "./entities/subscription.entity";
+import { Played } from "./entities/played.entity";
+import { SubscribePodcastInput, SubscribePodcastOutput } from "./dtos/subscribe-podcast.dto";
+import { SeeSubscriptionsOutput } from "./dtos/see-subscriptions.dto";
+import { MarkEpisodeAsPlayedInput, MarkEpisodeAsPlayedOutput } from "./dtos/mark-episode-played.dto";
 
 @Injectable()
 export class PodcastsService {
@@ -29,6 +29,10 @@ export class PodcastsService {
     private readonly podcastRepository: Repository<Podcast>,
     @InjectRepository(Episode)
     private readonly episodeRepository: Repository<Episode>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(Played)
+    private readonly playedRepository: Repository<Played>,
   ) {}
 
   private readonly InternalServerErrorOutput = {
@@ -218,5 +222,58 @@ export class PodcastsService {
     } catch (e) {
       return this.InternalServerErrorOutput;
     }
+  }
+  
+  async searchPodcastByTitle({ query }: SearchPodcastInput): Promise<SearchPodcastOutput> {
+    try {
+      const podcasts = await this.podcastRepository.find({ where: { title: ILike(`%${query}%`) } })
+      if (!podcasts) throw new Error('Podcasts not found')
+      return { ok: true, result: podcasts }
+    } catch (error){
+      return {
+        ok: false,
+        error: error.message,
+      }
+    }
+  }
+  
+  async subscribePodcast(user, { podcastId }: SubscribePodcastInput): Promise<SubscribePodcastOutput> {
+    try {
+      const podcast = await this.podcastRepository.findOne({where: { id: podcastId }})
+      if (!podcast) throw new Error('Podcast not found')
+      const subscription = this.subscriptionRepository.create()
+      subscription.user = user;
+      subscription.podcast = podcast;
+      await this.subscriptionRepository.save(subscription);
+      return { ok: true }
+    }catch (error){
+      return { ok: false, error: error.message }
+    }
+  }
+  
+  async seeSubscriptions(user): Promise<SeeSubscriptionsOutput>{
+    try {
+      const subscriptions = await this.subscriptionRepository.find({where: { user: { id: user.id}}, relations: ['podcast']});
+      if (!subscriptions) throw new Error('subscription not exists')
+      const podcasts = subscriptions.map((subscription) => subscription.podcast);
+      return {
+        ok: true,
+        result: podcasts
+      }
+    }catch (error){
+      return { ok: false, error: error.message }
+    }
+  }
+  
+  async markEpisodeAsPlayed(user, { episodeId }: MarkEpisodeAsPlayedInput): Promise<MarkEpisodeAsPlayedOutput> {
+    try {
+      const episode = await this.episodeRepository.findOne({ where: { id: episodeId } })
+      if (!episode) throw new Error("Episode not found");
+      await this.playedRepository.save(this.playedRepository.create({ user, episode }));
+      return {ok: true};
+    }catch (error){
+      return { ok: false, error: error.message};
+    }
+    
   }
 }
