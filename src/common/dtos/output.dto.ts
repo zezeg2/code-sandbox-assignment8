@@ -1,5 +1,5 @@
-import { ObjectType, Field } from '@nestjs/graphql';
-import { IsString, IsBoolean, IsOptional } from 'class-validator';
+import { Field, ObjectType } from "@nestjs/graphql";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
 
 @ObjectType()
 export class CoreOutput {
